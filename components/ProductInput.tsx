@@ -103,6 +103,13 @@ const ProductInput: React.FC<ProductInputProps> = ({
       
       if (response.ok) {
         const product = await response.json();
+        
+        const convertedProduct: Product = {
+          ...product,
+          is_local: Boolean(product.is_local),
+        };
+        ;
+
         onProductFound(product);
         if (externalCode === undefined) {
           setProductCode('');

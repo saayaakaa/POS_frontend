@@ -7,6 +7,6 @@ export interface Product {
     price: number;
     tax_rate: number;
     category?: string;
-    is_local?: number;
+    is_local?: boolean; // ← boolean に統一
   }
   
