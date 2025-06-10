@@ -37,9 +37,15 @@ const Cart: NextPage = () => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<LastPurchase | null>(null);
 
-  // 🔒 本番環境の HTTPS URL を指定
   const getApiBaseUrl = () => {
-    return 'https://app-step4-21.azurewebsites.net';
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      return `http://${hostname}:8000`;
+    }
+    return 'http://localhost:8000';
   };
 
   useEffect(() => {
@@ -157,9 +163,7 @@ const Cart: NextPage = () => {
             </div>
           </div>
         )}
-
-        {/* カート内容・履歴・合計・ボタンのセクションは変わっていませんので省略 */}
-        {/* 必要なら全体コピー再度お送りします（もしくは部分変更差分でもOK） */}
+        {/* ...省略（商品一覧や履歴UIなど） */}
       </div>
     </div>
   );
