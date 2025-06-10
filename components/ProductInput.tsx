@@ -6,7 +6,7 @@ interface Product {
   product_code: string;
   product_name: string;
   price: number;
-  tax_rate?: number;
+  tax_rate: number;
   category?: string;
   is_local?: boolean;
 }
