@@ -1,9 +1,4 @@
-interface Product {
-  id: number;
-  product_code: string;
-  product_name: string;
-  price: number;
-}
+import { Product } from '../types/Product'  // ✅ 型定義を共通化
 
 interface ProductInfoProps {
   product: Product;
@@ -31,4 +26,4 @@ const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
   );
 };
 
-export default ProductInfo; 
+export default ProductInfo;
