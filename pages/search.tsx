@@ -53,7 +53,7 @@ export default function ProductSearchPage() {
       const hostname = window.location.hostname;
       return `https://${hostname}`;
     }
-    return 'https://localhost:8000';
+    return process.env.NEXT_PUBLIC_API_URL;
   };
 
   useEffect(() => {
