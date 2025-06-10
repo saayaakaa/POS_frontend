@@ -6,6 +6,9 @@ const nextConfig = {
     },
     // サーバー外部パッケージ設定（Next.js 15対応）
     serverExternalPackages: [],
+    // standalone 出力設定（Azure App Service 用）
+    output: 'standalone',
+
     // 開発時のHTTPS設定
     ...(process.env.NODE_ENV === 'development' && process.env.HTTPS === 'true' && {
         server: {
@@ -15,6 +18,6 @@ const nextConfig = {
             },
         },
     }),
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
