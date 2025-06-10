@@ -11,19 +11,6 @@ interface CartItem {
   quantity: number;
 }
 
-interface PurchaseHistoryItem {
-  id: number;
-  purchase_date: string;
-  total_amount: number;
-  items: {
-    product_code: string;
-    product_name: string;
-    price: number;
-    quantity: number;
-    total_price: number;
-  }[];
-}
-
 interface LastPurchase {
   totalAmount: number;
   purchaseId: string;
@@ -33,7 +20,6 @@ const Cart: NextPage = () => {
   const router = useRouter();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistoryItem[]>([]);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<LastPurchase | null>(null);
 
@@ -57,20 +43,7 @@ const Cart: NextPage = () => {
         console.error('カートデータの解析に失敗しました:', error);
       }
     }
-    fetchPurchaseHistory();
   }, [router.query.items]);
-
-  const fetchPurchaseHistory = async () => {
-    try {
-      const response = await fetch(`${getApiBaseUrl()}/purchase-history?limit=5`);
-      if (response.ok) {
-        const result = await response.json();
-        setPurchaseHistory(result.data);
-      }
-    } catch (error) {
-      console.error('購入履歴の取得に失敗しました:', error);
-    }
-  };
 
   const updateQuantity = (productCode: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -114,7 +87,6 @@ const Cart: NextPage = () => {
         });
         setShowSuccessPopup(true);
         setCartItems([]);
-        await fetchPurchaseHistory();
         setTimeout(() => {
           setShowSuccessPopup(false);
         }, 3000);
@@ -163,7 +135,87 @@ const Cart: NextPage = () => {
             </div>
           </div>
         )}
-        {/* ...省略（商品一覧や履歴UIなど） */}
+        
+        {/* カート内容表示 */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg">
+          <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+            🛒 カート確認
+          </h1>
+          
+          {cartItems.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🛒</div>
+              <p className="text-gray-500 mb-4">カートは空です</p>
+              <Link
+                href="/search"
+                className="inline-block bg-gradient-to-r from-orange-400 to-pink-400 text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition"
+              >
+                商品を探す
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cartItems.map((item) => (
+                <div key={item.product_code} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">{item.product_name}</h3>
+                    <p className="text-sm text-gray-600">¥{item.price.toLocaleString()} × {item.quantity}</p>
+                    <p className="font-bold text-orange-600">小計: ¥{(item.price * item.quantity).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => updateQuantity(item.product_code, item.quantity - 1)}
+                      className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                    >
+                      -
+                    </button>
+                    <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item.product_code, item.quantity + 1)}
+                      className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => removeItem(item.product_code)}
+                      className="ml-2 text-red-500 hover:text-red-700 transition"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold">合計数量:</span>
+                  <span className="text-lg font-bold">{totalQuantity}個</span>
+                </div>
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-xl font-semibold">合計金額:</span>
+                  <span className="text-2xl font-bold text-orange-600">¥{totalAmount.toLocaleString()}</span>
+                </div>
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={handlePurchase}
+                    disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl font-bold text-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? '処理中...' : '購入する'}
+                  </button>
+                  
+                  <Link
+                    href="/search"
+                    className="block w-full py-3 bg-gray-500 text-white rounded-xl font-semibold text-center hover:bg-gray-600 transition"
+                  >
+                    商品検索に戻る
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
