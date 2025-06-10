@@ -1,11 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Azure App Service用の設定に変更
-    output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
-    trailingSlash: true,
-    images: {
-        unoptimized: true
-    },
+    output: 'standalone',
     reactStrictMode: true,
     compiler: {
         styledComponents: true,

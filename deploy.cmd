@@ -1,7 +1,7 @@
 @if "%SCM_TRACE_LEVEL%" NEQ "4" @echo off
 
 :: ----------------------
-:: KUDU Deployment Script
+:: KUDU Deployment Script for Next.js Standalone
 :: Version: 1.0.17
 :: ----------------------
 
@@ -52,7 +52,7 @@ IF NOT DEFINED KUDU_SYNC_CMD (
 :: Deployment
 :: ----------
 
-echo Handling Next.js deployment.
+echo Handling Next.js standalone deployment.
 
 :: 1. KuduSync
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
@@ -71,16 +71,31 @@ IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
   popd
 )
 
-:: 4. Build the Next.js application for static export
+:: 4. Build the Next.js application
 IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
   pushd "%DEPLOYMENT_TARGET%"
   call :ExecuteCmd !NPM_CMD! run build
   IF !ERRORLEVEL! NEQ 0 goto error
   
-  :: Copy static export files to deployment target
-  IF EXIST "out" (
-    call :ExecuteCmd xcopy "out\*" "." /E /Y /I
+  :: Copy standalone server files to root
+  IF EXIST ".next\standalone" (
+    echo Copying standalone server files...
+    call :ExecuteCmd xcopy ".next\standalone\*" "." /E /Y /I
     IF !ERRORLEVEL! NEQ 0 goto error
+    
+    :: Copy static files
+    IF EXIST ".next\static" (
+      echo Copying static files...
+      call :ExecuteCmd xcopy ".next\static" ".next\static" /E /Y /I
+      IF !ERRORLEVEL! NEQ 0 goto error
+    )
+    
+    :: Copy public files
+    IF EXIST "public" (
+      echo Copying public files...
+      call :ExecuteCmd xcopy "public\*" "." /E /Y /I
+      IF !ERRORLEVEL! NEQ 0 goto error
+    )
   )
   popd
 )
