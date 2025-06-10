@@ -133,6 +133,7 @@ export default function ProductSearchPage() {
   // ここから先のカート追加、購入処理、UI等は必要に応じて続けてください
   return (
     <div>
+      <h1>あああああ</h1>
       {/* JSXコード（UI部分）をこのあとに追加してください */}
     </div>
   )
