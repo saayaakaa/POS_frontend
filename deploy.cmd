@@ -1,8 +1,8 @@
 @if "%SCM_TRACE_LEVEL%" NEQ "4" @echo off
 
 :: ----------------------
-:: KUDU Deployment Script for Next.js Standalone
-:: Version: 1.0.17
+:: KUDU Deployment Script for Next.js Standalone (Simplified)
+:: Version: 1.0.18
 :: ----------------------
 
 :: Prerequisites
@@ -54,7 +54,7 @@ IF NOT DEFINED KUDU_SYNC_CMD (
 
 echo Handling Next.js standalone deployment.
 
-:: 1. KuduSync
+:: 1. KuduSync - Copy pre-built files from GitHub Actions
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
   call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
   IF !ERRORLEVEL! NEQ 0 goto error
@@ -63,54 +63,15 @@ IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
 :: 2. Select node version
 call :SelectNodeVersion
 
-:: 3. Install npm packages
+:: 3. Install production dependencies (if needed)
 IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
   pushd "%DEPLOYMENT_TARGET%"
-  call :ExecuteCmd !NPM_CMD! install --production
+  call :ExecuteCmd !NPM_CMD! install --production --ignore-scripts
   IF !ERRORLEVEL! NEQ 0 goto error
   popd
 )
 
-:: 4. Build the Next.js application
-IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
-  pushd "%DEPLOYMENT_TARGET%"
-  call :ExecuteCmd !NPM_CMD! run build
-  IF !ERRORLEVEL! NEQ 0 goto error
-  
-  :: Copy standalone server files to root
-  IF EXIST ".next\standalone" (
-    echo Copying standalone server files...
-    call :ExecuteCmd xcopy ".next\standalone\*" "." /E /Y /I
-    IF !ERRORLEVEL! NEQ 0 goto error
-    
-    :: Create .next directory in deployment target
-    IF NOT EXIST ".next" (
-      mkdir ".next"
-    )
-    
-    :: Copy static files to correct location
-    IF EXIST ".next\static" (
-      echo Copying static files to .next\static...
-      call :ExecuteCmd xcopy ".next\static" ".next\static" /E /Y /I
-      IF !ERRORLEVEL! NEQ 0 goto error
-    )
-    
-    :: Copy public files
-    IF EXIST "public" (
-      echo Copying public files...
-      call :ExecuteCmd xcopy "public\*" "." /E /Y /I
-      IF !ERRORLEVEL! NEQ 0 goto error
-    )
-    
-    :: Ensure static files are accessible from standalone build
-    IF EXIST "%DEPLOYMENT_SOURCE%\.next\static" (
-      echo Copying original static files...
-      call :ExecuteCmd xcopy "%DEPLOYMENT_SOURCE%\.next\static" ".next\static" /E /Y /I
-      IF !ERRORLEVEL! NEQ 0 goto error
-    )
-  )
-  popd
-)
+echo Next.js standalone deployment completed successfully.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 goto end
