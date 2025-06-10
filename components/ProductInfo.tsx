@@ -1,4 +1,4 @@
-import { Product } from '../types/Product'  // ✅ 型定義を共通化
+import { Product } from '../types/Product'
 
 interface ProductInfoProps {
   product: Product;
@@ -20,6 +20,16 @@ const ProductInfo: React.FC<ProductInfoProps> = ({ product }) => {
         <div className="flex justify-between">
           <span className="text-gray-600">価格:</span>
           <span className="font-bold text-lg text-blue-600">¥{product.price.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">カテゴリ:</span>
+          <span className="font-medium">{product.category ?? '未分類'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-600">税率:</span>
+          <span className="font-medium">
+            {typeof product.tax_rate === 'number' ? `${(product.tax_rate * 100).toFixed(0)}%` : 'N/A'}
+          </span>
         </div>
       </div>
     </div>
