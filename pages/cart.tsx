@@ -40,8 +40,8 @@ const Cart: NextPage = () => {
   // APIベースURLを環境変数から取得（フォールバック付き）
   const getApiBaseUrl = () => {
     // 環境変数が設定されている場合はそれを使用
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
+    if (process.env.NEXT_PUBLIC_API_BASE) {
+      return process.env.NEXT_PUBLIC_API_BASE;
     }
     
     // フォールバック: 動的にホスト名から構築（開発環境用）
