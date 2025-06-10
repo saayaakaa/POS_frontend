@@ -1,15 +1,6 @@
 import { useState } from 'react';
 import ProductInput from '../components/ProductInput';
-
-interface Product {
-  id: number;
-  product_code: string;
-  product_name: string;
-  price: number;
-  tax_rate: number;
-  category: string;
-  is_local: boolean;
-}
+import { Product } from '../types/Product';  // ✅ 共通型をインポート
 
 export default function ScannerTest() {
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
@@ -103,4 +94,4 @@ export default function ScannerTest() {
       </div>
     </div>
   );
-} 
+}
