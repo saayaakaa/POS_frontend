@@ -1,8 +1,8 @@
 @if "%SCM_TRACE_LEVEL%" NEQ "4" @echo off
 
 :: ----------------------
-:: KUDU Deployment Script for Next.js Standalone (Simplified)
-:: Version: 1.0.18
+:: KUDU Deployment Script for Next.js Standalone (GitHub Actions Pre-built)
+:: Version: 1.0.19
 :: ----------------------
 
 :: Prerequisites
@@ -52,7 +52,7 @@ IF NOT DEFINED KUDU_SYNC_CMD (
 :: Deployment
 :: ----------
 
-echo Handling Next.js standalone deployment.
+echo Handling Next.js standalone deployment (GitHub Actions pre-built).
 
 :: 1. KuduSync - Copy pre-built files from GitHub Actions
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
@@ -62,14 +62,6 @@ IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
 
 :: 2. Select node version
 call :SelectNodeVersion
-
-:: 3. Install production dependencies (if needed)
-IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
-  pushd "%DEPLOYMENT_TARGET%"
-  call :ExecuteCmd !NPM_CMD! install --production --ignore-scripts
-  IF !ERRORLEVEL! NEQ 0 goto error
-  popd
-)
 
 echo Next.js standalone deployment completed successfully.
 

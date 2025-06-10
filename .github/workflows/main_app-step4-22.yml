@@ -24,23 +24,28 @@ jobs:
           node-version: 'lts/*'
 
       - name: npm install, build, and test
-      #1
         env:
-          NEXT_PUBLIC_API_ENDPOINT: ${{ secrets.NEXT_PUBLIC_API_ENDPOINT }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
         run: |
           npm install
           npm run build --if-present
           npm run test --if-present
 
-      #2
       - name: Copy artifact for deployment job
         run: |
           mkdir deploy
-          cp -r ./.next/standalone/. ./deploy
-          cp -r ./.next/static/. ./deploy/.next/static
+          # Copy standalone server files
+          cp -r ./.next/standalone/. ./deploy/
+          # Copy static files to the correct location
+          mkdir -p ./deploy/.next
+          cp -r ./.next/static ./deploy/.next/
+          # Copy public files
+          if [ -d "./public" ]; then
+            cp -r ./public/. ./deploy/public/
+          fi
          
       - name: Zip artifact for deployment
-        run: zip release.zip ./deploy -r   #3
+        run: zip -r release.zip ./deploy
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -70,5 +75,5 @@ jobs:
         with:
           app-name: 'app-step4-22'
           slot-name: 'Production'
-          package: ./deploy #4
+          package: ./deploy
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5EFFFEBF26524CF9AEB2E93563273662 }}
