@@ -60,6 +60,8 @@ export default function ProductSearchPage() {
     fetchPurchaseHistory()
   }, [])
 
+  console.log(process.env.NEXT_PUBLIC_API_URL)
+
   const fetchPurchaseHistory = async () => {
     try {
       const controller = new AbortController();
