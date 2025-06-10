@@ -52,7 +52,7 @@ IF NOT DEFINED KUDU_SYNC_CMD (
 :: Deployment
 :: ----------
 
-echo Handling node.js deployment.
+echo Handling Next.js deployment.
 
 :: 1. KuduSync
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
@@ -71,11 +71,17 @@ IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
   popd
 )
 
-:: 4. Build the application
+:: 4. Build the Next.js application for static export
 IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
   pushd "%DEPLOYMENT_TARGET%"
   call :ExecuteCmd !NPM_CMD! run build
   IF !ERRORLEVEL! NEQ 0 goto error
+  
+  :: Copy static export files to deployment target
+  IF EXIST "out" (
+    call :ExecuteCmd xcopy "out\*" "." /E /Y /I
+    IF !ERRORLEVEL! NEQ 0 goto error
+  )
   popd
 )
 
