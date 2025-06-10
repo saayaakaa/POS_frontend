@@ -34,11 +34,20 @@ export default function ProductSearchPage() {
     if (process.env.NEXT_PUBLIC_API_URL) {
       return process.env.NEXT_PUBLIC_API_URL;
     }
+    
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      return `https://${hostname}`;
+      const protocol = window.location.protocol;
+      
+      // 本番環境（azurewebsites.net）の場合
+      if (hostname.includes('azurewebsites.net')) {
+        return `${protocol}//${hostname}`;
+      }
+      
+      // ローカル開発環境の場合
+      return `https://${hostname}:8443`;
     }
-    return process.env.NEXT_PUBLIC_API_URL;
+    return 'https://localhost:8443';
   };
 
   const handleProductFound = (foundProduct: Product) => {

@@ -83,9 +83,14 @@ IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
     call :ExecuteCmd xcopy ".next\standalone\*" "." /E /Y /I
     IF !ERRORLEVEL! NEQ 0 goto error
     
-    :: Copy static files
+    :: Create .next directory in deployment target
+    IF NOT EXIST ".next" (
+      mkdir ".next"
+    )
+    
+    :: Copy static files to correct location
     IF EXIST ".next\static" (
-      echo Copying static files...
+      echo Copying static files to .next\static...
       call :ExecuteCmd xcopy ".next\static" ".next\static" /E /Y /I
       IF !ERRORLEVEL! NEQ 0 goto error
     )
@@ -94,6 +99,13 @@ IF EXIST "%DEPLOYMENT_TARGET%\package.json" (
     IF EXIST "public" (
       echo Copying public files...
       call :ExecuteCmd xcopy "public\*" "." /E /Y /I
+      IF !ERRORLEVEL! NEQ 0 goto error
+    )
+    
+    :: Ensure static files are accessible from standalone build
+    IF EXIST "%DEPLOYMENT_SOURCE%\.next\static" (
+      echo Copying original static files...
+      call :ExecuteCmd xcopy "%DEPLOYMENT_SOURCE%\.next\static" ".next\static" /E /Y /I
       IF !ERRORLEVEL! NEQ 0 goto error
     )
   )

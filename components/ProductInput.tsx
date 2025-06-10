@@ -33,9 +33,15 @@ const ProductInput: React.FC<ProductInputProps> = ({
     }
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      return `http://${hostname}:8000`;
+      const protocol = window.location.protocol;
+      
+      if (hostname.includes('azurewebsites.net')) {
+        return `${protocol}//${hostname}`;
+      }
+      
+      return `https://${hostname}:8443`;
     }
-    return 'http://localhost:8000';
+    return 'https://localhost:8443';
   };
 
   const validateProductCode = (code: string): boolean => {
