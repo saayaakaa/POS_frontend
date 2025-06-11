@@ -58,11 +58,11 @@ export default function ScannerTest() {
                 <div className="ml-3 flex-1">
                   <h3 className="text-sm font-medium text-green-800">商品が見つかりました</h3>
                   <div className="mt-2 text-sm text-green-700">
-                    <p><strong>商品コード:</strong> {foundProduct.product_code}</p>
-                    <p><strong>商品名:</strong> {foundProduct.product_name}</p>
-                    <p><strong>価格:</strong> ¥{foundProduct.price.toLocaleString()}</p>
-                    <p><strong>税率:</strong> {(foundProduct.tax_rate * 100).toFixed(0)}%</p>
-                    <p><strong>カテゴリ:</strong> {foundProduct.category}</p>
+                    <p><strong>商品コード:</strong> {foundProduct.CODE || foundProduct.product_code}</p>
+                    <p><strong>商品名:</strong> {foundProduct.NAME || foundProduct.product_name}</p>
+                    <p><strong>価格:</strong> ¥{(foundProduct.PRICE || foundProduct.price || 0).toLocaleString()}</p>
+                    <p><strong>税率:</strong> {foundProduct.tax_rate ? (foundProduct.tax_rate * 100).toFixed(0) : 'N/A'}%</p>
+                    <p><strong>カテゴリ:</strong> {foundProduct.category || '未分類'}</p>
                     {foundProduct.is_local && (
                       <p className="text-orange-600"><strong>🏷️ 地域限定商品</strong></p>
                     )}

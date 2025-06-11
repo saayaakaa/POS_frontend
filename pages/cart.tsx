@@ -2,15 +2,8 @@ import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { getPurchaseUrlLegacy } from '../utils/api';
-
-interface CartItem {
-  id: number;
-  product_code: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-}
+import { CartItem } from '../types/Product';
+import { getApiBaseUrl } from '../utils/api';
 
 interface LastPurchase {
   totalAmount: number;
@@ -37,10 +30,10 @@ const Cart: NextPage = () => {
 
   const updateQuantity = (productCode: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      setCartItems(cartItems.filter(item => item.product_code !== productCode));
+      setCartItems(cartItems.filter(item => (item.CODE || item.product_code) !== productCode));
     } else {
       setCartItems(cartItems.map(item =>
-        item.product_code === productCode
+        (item.CODE || item.product_code) === productCode
           ? { ...item, quantity: newQuantity }
           : item
       ));
@@ -48,7 +41,7 @@ const Cart: NextPage = () => {
   };
 
   const removeItem = (productCode: string) => {
-    setCartItems(cartItems.filter(item => item.product_code !== productCode));
+    setCartItems(cartItems.filter(item => (item.CODE || item.product_code) !== productCode));
   };
 
   const handlePurchase = async () => {
@@ -56,12 +49,12 @@ const Cart: NextPage = () => {
     try {
       const purchaseData = {
         items: cartItems.map(item => ({
-          product_code: item.product_code,
+          product_code: item.CODE || item.product_code,
           quantity: item.quantity
         }))
       };
 
-      const response = await fetch(getPurchaseUrlLegacy(), {
+      const response = await fetch(`${getApiBaseUrl()}/api/v1/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +86,10 @@ const Cart: NextPage = () => {
   };
 
   const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalAmount = cartItems.reduce((sum, item) => {
+    const price = item.PRICE || item.price || 0;
+    return sum + (price * item.quantity);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] px-4 py-8">
@@ -145,36 +141,43 @@ const Cart: NextPage = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item) => (
-                <div key={item.product_code} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800">{item.product_name}</h3>
-                    <p className="text-sm text-gray-600">¥{item.price.toLocaleString()} × {item.quantity}</p>
-                    <p className="font-bold text-orange-600">小計: ¥{(item.price * item.quantity).toLocaleString()}</p>
+              {cartItems.map((item) => {
+                // 新しいAPI仕様（Lv1）を優先し、旧形式にフォールバック
+                const productCode = item.CODE || item.product_code || '';
+                const productName = item.NAME || item.product_name || '';
+                const price = item.PRICE || item.price || 0;
+                
+                return (
+                  <div key={productCode} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-800">{productName}</h3>
+                      <p className="text-sm text-gray-600">¥{price.toLocaleString()} × {item.quantity}</p>
+                      <p className="font-bold text-orange-600">小計: ¥{(price * item.quantity).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => updateQuantity(productCode, item.quantity - 1)}
+                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(productCode, item.quantity + 1)}
+                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => removeItem(productCode)}
+                        className="ml-2 text-red-500 hover:text-red-700 transition"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => updateQuantity(item.product_code, item.quantity - 1)}
-                      className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
-                    >
-                      -
-                    </button>
-                    <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.product_code, item.quantity + 1)}
-                      className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => removeItem(item.product_code)}
-                      className="ml-2 text-red-500 hover:text-red-700 transition"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center mb-4">
