@@ -121,7 +121,7 @@ const ProductInput: React.FC<ProductInputProps> = ({
           setProductCode('');
         }
       } else if (response.status === 404) {
-        const errorMsg = '商品が見つかりませんでした';
+        const errorMsg = '商品がマスタ未登録です';
         if (onError) onError(errorMsg);
         if (onSearchError) onSearchError(errorMsg);
       } else {
@@ -192,10 +192,10 @@ const ProductInput: React.FC<ProductInputProps> = ({
           {loading ? (
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              検索中...
+              読み込み中...
             </div>
           ) : (
-            '商品を検索'
+            '読み込み'
           )}
         </button>
       </form>

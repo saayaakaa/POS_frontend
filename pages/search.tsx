@@ -132,10 +132,6 @@ export default function ProductSearchPage() {
         });
         setShowSuccessPopup(true);
         setCart([]);
-        
-        setTimeout(() => {
-          setShowSuccessPopup(false);
-        }, 3000);
       } else {
         const errorData = await response.json();
         alert(`購入処理に失敗しました: ${errorData.detail || '不明なエラー'}`);
@@ -148,7 +144,18 @@ export default function ProductSearchPage() {
     }
   };
 
+  const handleClosePopup = () => {
+    setShowSuccessPopup(false);
+    // 全項目をクリア
+    setProduct(null);
+    setCode('');
+    setSearchError('');
+    setLastPurchase(null);
+  };
+
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // 税込金額を計算（税率10%と仮定）
+  const totalAmountWithTax = Math.floor(totalAmount * 1.1);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
@@ -167,15 +174,15 @@ export default function ProductSearchPage() {
                 <span className="font-bold text-green-700">{lastPurchase.purchaseId}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">合計金額:</span>
-                <span className="font-bold text-green-700">¥{lastPurchase.totalAmount.toLocaleString()}</span>
+                <span className="text-gray-600">合計金額（税込）:</span>
+                <span className="font-bold text-green-700">¥{Math.floor(lastPurchase.totalAmount * 1.1).toLocaleString()}</span>
               </div>
             </div>
             <button
-              onClick={() => setShowSuccessPopup(false)}
+              onClick={handleClosePopup}
               className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-400 to-green-600 hover:opacity-90 transition"
             >
-              閉じる
+              OK
             </button>
           </div>
         </div>
@@ -224,7 +231,7 @@ export default function ProductSearchPage() {
                   className="w-full py-4 bg-gradient-to-r from-orange-400 to-pink-400 text-white rounded-xl font-bold text-lg hover:opacity-90 transition flex items-center justify-center space-x-2"
                 >
                   <span>➕</span>
-                  <span>カートに追加</span>
+                  <span>追加</span>
                 </button>
               </div>
             </div>
@@ -234,10 +241,10 @@ export default function ProductSearchPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <span className="text-2xl">💰</span>
-              <span className="text-lg font-semibold text-gray-700">合計金額</span>
+              <span className="text-lg font-semibold text-gray-700">合計金額（税込）</span>
             </div>
             <div className="text-3xl font-bold text-gray-800">
-              ¥{totalAmount.toLocaleString()}
+              ¥{totalAmountWithTax.toLocaleString()}
             </div>
           </div>
 
