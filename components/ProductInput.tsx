@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import BarcodeScanner from './BarcodeScanner';
 import { Product } from '../types/Product'; // ✅ 共通型の読み込み
+import { getProductSearchUrl, getProductSearchUrlLegacy } from '../utils/api';
 
 interface ProductInputProps {
   onProductFound: (product: Product) => void;
@@ -19,30 +20,22 @@ const ProductInput: React.FC<ProductInputProps> = ({
   onCodeChange,
   className
 }) => {
-  const [internalCode, setInternalCode] = useState('');
+  const [productCode, setProductCode] = useState(externalCode || '');
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
 
-  const productCode = externalCode !== undefined ? externalCode : internalCode;
-  const setProductCode = onCodeChange || setInternalCode;
+  useEffect(() => {
+    if (externalCode !== undefined) {
+      setProductCode(externalCode);
+    }
+  }, [externalCode]);
 
-  const getApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
+  useEffect(() => {
+    if (onCodeChange) {
+      onCodeChange(productCode);
     }
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      
-      if (hostname.includes('azurewebsites.net')) {
-        return `${protocol}//${hostname}`;
-      }
-      
-      return `https://${hostname}:8443`;
-    }
-    return 'https://localhost:8443';
-  };
+  }, [productCode, onCodeChange]);
 
   const validateProductCode = (code: string): boolean => {
     return /^\d{13}$/.test(code);
@@ -105,25 +98,64 @@ const ProductInput: React.FC<ProductInputProps> = ({
     setValidationError('');
     
     try {
-      const response = await fetch(`${getApiBaseUrl()}/products/${searchCode}`);
+      // 新しいAPIエンドポイントを試す
+      let response = await fetch(getProductSearchUrl(searchCode));
       
       if (response.ok) {
         const product = await response.json();
         
+        // 新しい形式のレスポンスを処理
         const convertedProduct: Product = {
-          ...product,
+          PRD_ID: product.PRD_ID,
+          CODE: product.CODE,
+          NAME: product.NAME,
+          PRICE: product.PRICE,
+          // 旧形式との互換性のため
+          id: product.PRD_ID,
+          product_code: product.CODE,
+          product_name: product.NAME,
+          price: product.PRICE,
           is_local: Boolean(product.is_local),
         };
-        ;
 
-        onProductFound(product);
+        onProductFound(convertedProduct);
         if (externalCode === undefined) {
           setProductCode('');
         }
       } else if (response.status === 404) {
-        const errorMsg = '商品がマスタ未登録です';
-        if (onError) onError(errorMsg);
-        if (onSearchError) onSearchError(errorMsg);
+        // 新しいAPIで見つからない場合、旧APIも試す（互換性のため）
+        try {
+          response = await fetch(getProductSearchUrlLegacy(searchCode));
+          if (response.ok) {
+            const product = await response.json();
+            
+            const convertedProduct: Product = {
+              PRD_ID: product.id || product.PRD_ID,
+              CODE: product.product_code || product.CODE,
+              NAME: product.product_name || product.NAME,
+              PRICE: product.price || product.PRICE,
+              // 旧形式との互換性のため
+              id: product.id,
+              product_code: product.product_code,
+              product_name: product.product_name,
+              price: product.price,
+              is_local: Boolean(product.is_local),
+            };
+
+            onProductFound(convertedProduct);
+            if (externalCode === undefined) {
+              setProductCode('');
+            }
+          } else {
+            const errorMsg = '商品がマスタ未登録です';
+            if (onError) onError(errorMsg);
+            if (onSearchError) onSearchError(errorMsg);
+          }
+        } catch (fallbackError) {
+          const errorMsg = '商品がマスタ未登録です';
+          if (onError) onError(errorMsg);
+          if (onSearchError) onSearchError(errorMsg);
+        }
       } else {
         const errorMsg = '商品の検索中にエラーが発生しました';
         if (onError) onError(errorMsg);
@@ -200,12 +232,14 @@ const ProductInput: React.FC<ProductInputProps> = ({
         </button>
       </form>
 
-      <BarcodeScanner
-        isActive={showScanner}
-        onScanSuccess={handleScanSuccess}
-        onScanError={handleScanError}
-        onClose={closeScanner}
-      />
+      {showScanner && (
+        <BarcodeScanner
+          isActive={showScanner}
+          onScanSuccess={handleScanSuccess}
+          onScanError={handleScanError}
+          onClose={closeScanner}
+        />
+      )}
     </>
   );
 };

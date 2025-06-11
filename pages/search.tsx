@@ -2,53 +2,25 @@
 
 import { useState } from "react"
 import ProductInput from '../components/ProductInput'
-
-interface Product {
-  id: number;
-  product_code: string;
-  product_name: string;
-  price: number;
-  tax_rate?: number;
-  category?: string;
-  is_local?: boolean;
-}
-
-interface CartItem {
-  id: number;
-  product_code: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-}
+import POSSettingsComponent from '../components/POSSettings'
+import { Product, CartItem, PurchaseRequest, PurchaseResponse, POSSettings } from '../types/Product'
+import { getPurchaseUrl, getPurchaseUrlLegacy } from '../utils/api'
 
 export default function ProductSearchPage() {
   const [code, setCode] = useState("")
   const [product, setProduct] = useState<Product | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
-  const [lastPurchase, setLastPurchase] = useState<{totalAmount: number, purchaseId: string} | null>(null)
+  const [lastPurchase, setLastPurchase] = useState<{totalAmount: number, transactionId: string} | null>(null)
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState("")
-
-  const getApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      
-      // 本番環境（azurewebsites.net）の場合
-      if (hostname.includes('azurewebsites.net')) {
-        return `${protocol}//${hostname}`;
-      }
-      
-      // ローカル開発環境の場合
-      return `https://${hostname}:8443`;
-    }
-    return 'https://localhost:8443';
-  };
+  
+  // POS設定の状態管理
+  const [posSettings, setPosSettings] = useState<POSSettings>({
+    EMP_CD: "EMP001",
+    STORE_CD: "30",      // 仕様書：'30'固定
+    POS_NO: "90"         // 仕様書：'90'固定（モバイルレジ）
+  })
 
   const handleProductFound = (foundProduct: Product) => {
     setProduct(foundProduct);
@@ -64,21 +36,32 @@ export default function ProductSearchPage() {
   const addToCart = () => {
     if (!product) return;
     
-    const existingItem = cart.find(item => item.product_code === product.product_code);
+    // 新しい形式と旧形式の両方に対応
+    const productCode = product.CODE || product.product_code || '';
+    const productName = product.NAME || product.product_name || '';
+    const productPrice = product.PRICE || product.price || 0;
+    const productId = product.PRD_ID || product.id || 0;
+    
+    const existingItem = cart.find(item => (item.CODE || item.product_code) === productCode);
     
     if (existingItem) {
       setCart(cart.map(item =>
-        item.product_code === product.product_code
+        (item.CODE || item.product_code) === productCode
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       const newItem: CartItem = {
-        id: product.id,
-        product_code: product.product_code,
-        product_name: product.product_name,
-        price: product.price,
-        quantity: 1
+        PRD_ID: productId,
+        CODE: productCode,
+        NAME: productName,
+        PRICE: productPrice,
+        quantity: 1,
+        // 旧形式との互換性のため
+        id: productId,
+        product_code: productCode,
+        product_name: productName,
+        price: productPrice
       };
       setCart([...cart, newItem]);
     }
@@ -90,10 +73,10 @@ export default function ProductSearchPage() {
 
   const updateQuantity = (productCode: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      setCart(cart.filter(item => item.product_code !== productCode));
+      setCart(cart.filter(item => (item.CODE || item.product_code) !== productCode));
     } else {
       setCart(cart.map(item =>
-        item.product_code === productCode
+        (item.CODE || item.product_code) === productCode
           ? { ...item, quantity: newQuantity }
           : item
       ));
@@ -101,7 +84,7 @@ export default function ProductSearchPage() {
   };
 
   const removeFromCart = (productCode: string) => {
-    setCart(cart.filter(item => item.product_code !== productCode));
+    setCart(cart.filter(item => (item.CODE || item.product_code) !== productCode));
   };
 
   const handlePurchase = async () => {
@@ -109,14 +92,25 @@ export default function ProductSearchPage() {
     
     setLoading(true);
     try {
-      const purchaseData = {
-        items: cart.map(item => ({
-          product_code: item.product_code,
+      // 仕様書準拠：レジ担当者コードが空白の場合は'9999999999'
+      const empCode = posSettings.EMP_CD.trim() || "9999999999";
+      
+      // 新しいAPI形式でのリクエスト
+      const purchaseData: PurchaseRequest = {
+        EMP_CD: empCode,
+        STORE_CD: "30",      // 仕様書：'30'固定
+        POS_NO: "90",        // 仕様書：'90'固定（モバイルレジ）
+        products: cart.map(item => ({
+          PRD_ID: item.PRD_ID || item.id || 0,
+          CODE: item.CODE || item.product_code || '',
+          NAME: item.NAME || item.product_name || '',
+          PRICE: item.PRICE || item.price || 0,
           quantity: item.quantity
         }))
       };
 
-      const response = await fetch(`${getApiBaseUrl()}/purchase`, {
+      // 新しいAPIエンドポイントを試す
+      let response = await fetch(getPurchaseUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,13 +119,42 @@ export default function ProductSearchPage() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        const result: PurchaseResponse = await response.json();
         setLastPurchase({
-          totalAmount: result.total_amount,
-          purchaseId: result.purchase_id
+          totalAmount: result.TOTAL_AMT,
+          transactionId: result.TRD_ID
         });
         setShowSuccessPopup(true);
         setCart([]);
+      } else if (response.status === 404) {
+        // 新しいAPIが利用できない場合、旧APIを試す（互換性のため）
+        const fallbackData = {
+          items: cart.map(item => ({
+            product_code: item.CODE || item.product_code,
+            quantity: item.quantity
+          }))
+        };
+
+        response = await fetch(getPurchaseUrlLegacy(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(fallbackData),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setLastPurchase({
+            totalAmount: result.total_amount || result.TOTAL_AMT,
+            transactionId: result.purchase_id || result.TRD_ID
+          });
+          setShowSuccessPopup(true);
+          setCart([]);
+        } else {
+          const errorData = await response.json();
+          alert(`購入処理に失敗しました: ${errorData.detail || '不明なエラー'}`);
+        }
       } else {
         const errorData = await response.json();
         alert(`購入処理に失敗しました: ${errorData.detail || '不明なエラー'}`);
@@ -153,7 +176,7 @@ export default function ProductSearchPage() {
     setLastPurchase(null);
   };
 
-  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalAmount = cart.reduce((sum, item) => sum + ((item.PRICE || item.price || 0) * item.quantity), 0);
   // 税込金額を計算（税率10%と仮定）
   const totalAmountWithTax = Math.floor(totalAmount * 1.1);
 
@@ -170,8 +193,8 @@ export default function ProductSearchPage() {
             <p className="text-gray-600 mb-4">ご購入ありがとうございました！</p>
             <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 mb-4">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-600">購入ID:</span>
-                <span className="font-bold text-green-700">{lastPurchase.purchaseId}</span>
+                <span className="text-gray-600">取引ID:</span>
+                <span className="font-bold text-green-700">{lastPurchase.transactionId}</span>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600 font-semibold">合計金額（税込）:</span>
@@ -201,6 +224,12 @@ export default function ProductSearchPage() {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* POS設定 */}
+          <POSSettingsComponent
+            settings={posSettings}
+            onSettingsChange={setPosSettings}
+          />
+
           {/* 商品コード入力・スキャン */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
@@ -225,10 +254,10 @@ export default function ProductSearchPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  {product.product_name}
+                  {product.NAME || product.product_name}
                 </h3>
                 <div className="text-3xl font-bold text-orange-500 mb-6">
-                  ¥{product.price.toLocaleString()}
+                  ¥{(product.PRICE || product.price || 0).toLocaleString()}
                 </div>
                 <button
                   onClick={addToCart}
@@ -268,35 +297,41 @@ export default function ProductSearchPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.product_code} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">{item.product_name}</h4>
-                      <p className="text-sm text-gray-600">¥{item.price.toLocaleString()} × {item.quantity}</p>
+                {cart.map((item) => {
+                  const itemCode = item.CODE || item.product_code || '';
+                  const itemName = item.NAME || item.product_name || '';
+                  const itemPrice = item.PRICE || item.price || 0;
+                  
+                  return (
+                    <div key={itemCode} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-800">{itemName}</h4>
+                        <p className="text-sm text-gray-600">¥{itemPrice.toLocaleString()} × {item.quantity}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => updateQuantity(itemCode, item.quantity - 1)}
+                          className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(itemCode, item.quantity + 1)}
+                          className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => removeFromCart(itemCode)}
+                          className="ml-2 text-red-500 hover:text-red-700 transition"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => updateQuantity(item.product_code, item.quantity - 1)}
-                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 text-center font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.product_code, item.quantity + 1)}
-                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition"
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => removeFromCart(item.product_code)}
-                        className="ml-2 text-red-500 hover:text-red-700 transition"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

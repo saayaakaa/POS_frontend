@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { getPurchaseUrlLegacy } from '../utils/api';
 
 interface CartItem {
   id: number;
@@ -22,26 +23,6 @@ const Cart: NextPage = () => {
   const [loading, setLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<LastPurchase | null>(null);
-
-  const getApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      
-      // 本番環境（azurewebsites.net）の場合
-      if (hostname.includes('azurewebsites.net')) {
-        return `${protocol}//${hostname}`;
-      }
-      
-      // ローカル開発環境の場合
-      return `https://${hostname}:8443`;
-    }
-    return 'https://localhost:8443';
-  };
 
   useEffect(() => {
     if (router.query.items) {
@@ -80,7 +61,7 @@ const Cart: NextPage = () => {
         }))
       };
 
-      const response = await fetch(`${getApiBaseUrl()}/purchase`, {
+      const response = await fetch(getPurchaseUrlLegacy(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
