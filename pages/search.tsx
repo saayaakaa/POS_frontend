@@ -169,13 +169,17 @@ export default function ProductSearchPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">購入完了！</h2>
             <p className="text-gray-600 mb-4">ご購入ありがとうございました！</p>
             <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 mb-4">
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-3">
                 <span className="text-gray-600">購入ID:</span>
                 <span className="font-bold text-green-700">{lastPurchase.purchaseId}</span>
               </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600 font-semibold">合計金額（税込）:</span>
+                <span className="font-bold text-green-700 text-lg">¥{Math.floor(lastPurchase.totalAmount * 1.1).toLocaleString()}</span>
+              </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">合計金額（税込）:</span>
-                <span className="font-bold text-green-700">¥{Math.floor(lastPurchase.totalAmount * 1.1).toLocaleString()}</span>
+                <span className="text-gray-500 text-sm">（税抜）:</span>
+                <span className="text-green-600 text-sm">¥{lastPurchase.totalAmount.toLocaleString()}</span>
               </div>
             </div>
             <button
@@ -241,10 +245,13 @@ export default function ProductSearchPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <span className="text-2xl">💰</span>
-              <span className="text-lg font-semibold text-gray-700">合計金額（税込）</span>
+              <span className="text-lg font-semibold text-gray-700">合計金額</span>
             </div>
-            <div className="text-3xl font-bold text-gray-800">
+            <div className="text-3xl font-bold text-gray-800 mb-1">
               ¥{totalAmountWithTax.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500">
+              （税抜：¥{totalAmount.toLocaleString()}）
             </div>
           </div>
 
