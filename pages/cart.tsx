@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { CartItem } from '../types/Product';
+import { CartItem, PurchaseRequest, PurchaseResponse } from '../types/Product';
 import { getApiBaseUrl } from '../utils/api';
 
 interface LastPurchase {
   totalAmount: number;
-  purchaseId: string;
+  transactionId: string;
 }
 
 const Cart: NextPage = () => {
@@ -45,11 +45,20 @@ const Cart: NextPage = () => {
   };
 
   const handlePurchase = async () => {
+    if (cartItems.length === 0) return;
+    
     setLoading(true);
     try {
-      const purchaseData = {
-        items: cartItems.map(item => ({
-          product_code: item.CODE || item.product_code,
+      // 新しいAPI仕様（Lv1）に対応した購入処理
+      const purchaseData: PurchaseRequest = {
+        EMP_CD: "9999999999",  // 仕様書：空白の場合のデフォルト値
+        STORE_CD: "30",        // 仕様書：'30'固定
+        POS_NO: "90",          // 仕様書：'90'固定（モバイルレジ）
+        products: cartItems.map(item => ({
+          PRD_ID: item.PRD_ID || item.id || 0,
+          CODE: item.CODE || item.product_code || '',
+          NAME: item.NAME || item.product_name || '',
+          PRICE: item.PRICE || item.price || 0,
           quantity: item.quantity
         }))
       };
@@ -63,10 +72,10 @@ const Cart: NextPage = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        const result: PurchaseResponse = await response.json();
         setLastPurchase({
-          totalAmount: result.total_amount,
-          purchaseId: result.purchase_id
+          totalAmount: result.TOTAL_AMT,
+          transactionId: result.TRD_ID
         });
         setShowSuccessPopup(true);
         setCartItems([]);
@@ -75,6 +84,7 @@ const Cart: NextPage = () => {
         }, 3000);
       } else {
         const errorData = await response.json();
+        console.error('購入処理エラー:', errorData);
         router.push(`/result?success=false&error=${encodeURIComponent(errorData.detail || '購入処理に失敗しました')}`);
       }
     } catch (error) {
@@ -104,8 +114,8 @@ const Cart: NextPage = () => {
               <p className="text-gray-600 mb-4">ご購入ありがとうございました！</p>
               <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">購入ID:</span>
-                  <span className="font-bold text-green-700">{lastPurchase.purchaseId}</span>
+                  <span className="text-gray-600">取引ID:</span>
+                  <span className="font-bold text-green-700">{lastPurchase.transactionId}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">合計金額:</span>
