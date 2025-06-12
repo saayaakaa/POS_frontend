@@ -6,7 +6,7 @@
 export const getApiBaseUrl = (): string => {
   // 環境変数が設定されている場合は最優先
   if (process.env.NEXT_PUBLIC_API_URL) {
-    console.log('API URL (環境変数):', process.env.NEXT_PUBLIC_API_URL);
+    console.log('🌐 API URL (環境変数):', process.env.NEXT_PUBLIC_API_URL);
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
@@ -15,7 +15,12 @@ export const getApiBaseUrl = (): string => {
     const protocol = window.location.protocol;
     const port = window.location.port;
     
-    console.log('現在のURL情報:', { hostname, protocol, port });
+    console.log('🔍 現在のURL情報:', { 
+      hostname, 
+      protocol, 
+      port,
+      fullUrl: window.location.href 
+    });
     
     // 本番環境の判定を拡張
     const isProduction = 
@@ -26,20 +31,22 @@ export const getApiBaseUrl = (): string => {
       hostname.includes('railway.app') ||
       (!hostname.includes('localhost') && !hostname.includes('127.0.0.1') && hostname !== '');
     
+    console.log('🏭 本番環境判定:', isProduction);
+    
     if (isProduction) {
       const apiUrl = `${protocol}//${hostname}`;
-      console.log('本番環境API URL:', apiUrl);
+      console.log('✅ 本番環境API URL:', apiUrl);
       return apiUrl;
     }
     
     // ローカル開発環境の場合 - HTTPモードのバックエンドに対応
     const localUrl = `http://${hostname}:8000`;
-    console.log('ローカル開発環境API URL:', localUrl);
+    console.log('🏠 ローカル開発環境API URL:', localUrl);
     return localUrl;
   }
   
   // フォールバック - HTTPモードに変更
-  console.log('フォールバックAPI URL: http://localhost:8000');
+  console.log('⚠️ フォールバックAPI URL: http://localhost:8000');
   return 'http://localhost:8000';
 };
 

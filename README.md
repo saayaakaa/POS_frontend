@@ -93,8 +93,8 @@ npm start
 ## API連携
 
 ### バックエンドAPI
-- **商品検索**: `GET /products/{product_code}`
-- **購入処理**: `POST /purchase`
+- **商品検索**: `GET /api/v1/products/{code}`
+- **購入処理**: `POST /api/v1/purchase`
 
 ### エラーハンドリング
 - ネットワークエラー
@@ -212,3 +212,106 @@ npm run lint
 ## ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。
+
+## 本番環境でのトラブルシューティング
+
+### 1. データがDBに保存されない場合の確認手順
+
+#### ブラウザでの確認
+1. ブラウザの開発者ツール（F12）を開く
+2. Consoleタブを確認
+3. 以下のログを確認：
+   ```
+   🔍 現在のURL情報: { hostname, protocol, port, fullUrl }
+   🏭 本番環境判定: true/false
+   ✅ 本番環境API URL: https://your-domain.com
+   🔍 商品検索開始: { code, url }
+   📡 商品検索レスポンス: { status, ok, url }
+   🔍 購入処理開始: { url, data, empCode }
+   📡 購入処理レスポンス: { status, ok, url }
+   ```
+
+#### APIテストスクリプトでの確認
+```bash
+# ローカル環境
+python test_api_lv1.py
+
+# 本番環境
+export API_URL=https://your-production-domain.com
+python test_api_lv1.py
+```
+
+### 2. よくある問題と解決策
+
+#### 問題1: APIエンドポイントが見つからない (404エラー)
+- **原因**: バックエンドが新しいAPI仕様に対応していない
+- **解決策**: バックエンドのデプロイ状況を確認
+
+#### 問題2: CORS エラー
+- **原因**: フロントエンドとバックエンドのドメインが異なる
+- **解決策**: バックエンドのCORS設定を確認
+
+#### 問題3: 接続エラー
+- **原因**: APIベースURLが正しく設定されていない
+- **解決策**: 
+  1. ブラウザコンソールでAPI URLを確認
+  2. 環境変数 `NEXT_PUBLIC_API_URL` を設定
+
+### 3. 環境変数設定
+
+#### 本番環境
+```bash
+# .env.local または環境変数として設定
+NEXT_PUBLIC_API_URL=https://your-production-domain.com
+```
+
+#### 開発環境
+```bash
+# デフォルト: http://localhost:8000
+# 変更する場合のみ設定
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### 4. デバッグ情報の確認
+
+フロントエンドは以下の詳細なログを出力します：
+
+1. **API URL決定プロセス**
+   - 環境変数の確認
+   - 本番環境の判定
+   - 最終的なAPI URL
+
+2. **商品検索プロセス**
+   - リクエストURL
+   - レスポンス状況
+   - エラー詳細
+
+3. **購入処理プロセス**
+   - リクエストデータ
+   - レスポンス状況
+   - 成功/失敗の詳細
+
+### 5. 仕様書準拠の確認ポイント
+
+- **レジ担当者コード**: 空白時は '9999999999' に自動変換
+- **店舗コード**: '30' 固定
+- **POS機ID**: '90' 固定（モバイルレジ）
+- **商品データ**: PRD_ID, CODE, NAME, PRICE 形式
+- **購入結果**: success, TOTAL_AMT, TRD_ID 形式
+
+## 開発・デプロイ
+
+### 開発環境起動
+```bash
+npm run dev
+```
+
+### ビルド
+```bash
+npm run build
+```
+
+### 本番環境デプロイ
+1. 環境変数 `NEXT_PUBLIC_API_URL` を設定
+2. `npm run build` でビルド
+3. 静的ファイルをデプロイ

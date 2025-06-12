@@ -109,6 +109,13 @@ export default function ProductSearchPage() {
         }))
       };
 
+      console.log('購入処理開始 (search.tsx):', {
+        url: getPurchaseUrl(),
+        data: purchaseData,
+        empCode: empCode,
+        originalEmpCode: posSettings.EMP_CD
+      });
+
       // 新しいAPIエンドポイントを試す
       let response = await fetch(getPurchaseUrl(), {
         method: 'POST',
@@ -118,8 +125,15 @@ export default function ProductSearchPage() {
         body: JSON.stringify(purchaseData),
       });
 
+      console.log('購入処理レスポンス (search.tsx):', {
+        status: response.status,
+        ok: response.ok,
+        url: getPurchaseUrl()
+      });
+
       if (response.ok) {
         const result: PurchaseResponse = await response.json();
+        console.log('購入処理成功 (search.tsx):', result);
         setLastPurchase({
           totalAmount: result.TOTAL_AMT,
           transactionId: result.TRD_ID
@@ -127,6 +141,7 @@ export default function ProductSearchPage() {
         setShowSuccessPopup(true);
         setCart([]);
       } else if (response.status === 404) {
+        console.log('新しいAPIが利用できません。旧APIを試します...');
         // 新しいAPIが利用できない場合、旧APIを試す（互換性のため）
         const fallbackData = {
           items: cart.map(item => ({
@@ -134,6 +149,11 @@ export default function ProductSearchPage() {
             quantity: item.quantity
           }))
         };
+
+        console.log('旧API購入処理開始:', {
+          url: getPurchaseUrlLegacy(),
+          data: fallbackData
+        });
 
         response = await fetch(getPurchaseUrlLegacy(), {
           method: 'POST',
@@ -143,8 +163,14 @@ export default function ProductSearchPage() {
           body: JSON.stringify(fallbackData),
         });
 
+        console.log('旧API購入処理レスポンス:', {
+          status: response.status,
+          ok: response.ok
+        });
+
         if (response.ok) {
           const result = await response.json();
+          console.log('旧API購入処理成功:', result);
           setLastPurchase({
             totalAmount: result.total_amount || result.TOTAL_AMT,
             transactionId: result.purchase_id || result.TRD_ID
@@ -153,10 +179,12 @@ export default function ProductSearchPage() {
           setCart([]);
         } else {
           const errorData = await response.json();
+          console.error('旧API購入処理エラー:', errorData);
           alert(`購入処理に失敗しました: ${errorData.detail || '不明なエラー'}`);
         }
       } else {
         const errorData = await response.json();
+        console.error('購入処理エラー:', errorData);
         alert(`購入処理に失敗しました: ${errorData.detail || '不明なエラー'}`);
       }
     } catch (error) {

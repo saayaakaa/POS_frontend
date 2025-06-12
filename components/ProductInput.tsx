@@ -24,6 +24,7 @@ const ProductInput: React.FC<ProductInputProps> = ({
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (externalCode !== undefined) {
@@ -93,16 +94,30 @@ const ProductInput: React.FC<ProductInputProps> = ({
       setValidationError('商品コードは13桁の数字である必要があります');
       return;
     }
-
+    
     setLoading(true);
     setValidationError('');
+    setError('');
     
     try {
-      // 新しいAPIエンドポイントを試す
-      let response = await fetch(getProductSearchUrl(searchCode));
+      const searchUrl = getProductSearchUrl(searchCode);
+      console.log('🔍 商品検索開始:', {
+        code: searchCode,
+        url: searchUrl
+      });
       
+      // 新しいAPIエンドポイントを試す
+      let response = await fetch(searchUrl);
+      
+      console.log('📡 商品検索レスポンス:', {
+        status: response.status,
+        ok: response.ok,
+        url: searchUrl
+      });
+
       if (response.ok) {
-        const product = await response.json();
+        const product: Product = await response.json();
+        console.log('✅ 商品検索成功:', product);
         
         // 新しい形式のレスポンスを処理
         const convertedProduct: Product = {
@@ -123,46 +138,54 @@ const ProductInput: React.FC<ProductInputProps> = ({
           setProductCode('');
         }
       } else if (response.status === 404) {
-        // 新しいAPIで見つからない場合、旧APIも試す（互換性のため）
-        try {
-          response = await fetch(getProductSearchUrlLegacy(searchCode));
-          if (response.ok) {
-            const product = await response.json();
-            
-            const convertedProduct: Product = {
-              PRD_ID: product.id || product.PRD_ID,
-              CODE: product.product_code || product.CODE,
-              NAME: product.product_name || product.NAME,
-              PRICE: product.price || product.PRICE,
-              // 旧形式との互換性のため
-              id: product.id,
-              product_code: product.product_code,
-              product_name: product.product_name,
-              price: product.price,
-              is_local: Boolean(product.is_local),
-            };
+        console.log('⚠️ 新しいAPIで商品が見つかりません。旧APIを試します...');
+        // 新しいAPIで見つからない場合、旧APIを試す
+        const legacyUrl = getProductSearchUrlLegacy(searchCode);
+        console.log('🔄 旧API商品検索:', legacyUrl);
+        
+        response = await fetch(legacyUrl);
+        
+        console.log('📡 旧API商品検索レスポンス:', {
+          status: response.status,
+          ok: response.ok
+        });
 
-            onProductFound(convertedProduct);
-            if (externalCode === undefined) {
-              setProductCode('');
-            }
-          } else {
-            const errorMsg = '商品がマスタ未登録です';
-            if (onError) onError(errorMsg);
-            if (onSearchError) onSearchError(errorMsg);
+        if (response.ok) {
+          const legacyProduct = await response.json();
+          console.log('✅ 旧API商品検索成功:', legacyProduct);
+          
+          // 旧形式から新形式に変換
+          const convertedProduct: Product = {
+            PRD_ID: legacyProduct.id || 0,
+            CODE: legacyProduct.product_code || searchCode,
+            NAME: legacyProduct.product_name || '',
+            PRICE: legacyProduct.price || 0,
+            // 旧形式との互換性のため
+            id: legacyProduct.id,
+            product_code: legacyProduct.product_code,
+            product_name: legacyProduct.product_name,
+            price: legacyProduct.price,
+            is_local: Boolean(legacyProduct.is_local),
+          };
+          
+          onProductFound(convertedProduct);
+          if (externalCode === undefined) {
+            setProductCode('');
           }
-        } catch (fallbackError) {
+        } else {
+          console.error('❌ 旧API商品検索失敗:', response.status);
           const errorMsg = '商品がマスタ未登録です';
           if (onError) onError(errorMsg);
           if (onSearchError) onSearchError(errorMsg);
         }
       } else {
+        console.error('❌ 商品検索失敗:', response.status);
         const errorMsg = '商品の検索中にエラーが発生しました';
         if (onError) onError(errorMsg);
         if (onSearchError) onSearchError(errorMsg);
       }
     } catch (error) {
-      console.error('商品検索エラー:', error);
+      console.error('💥 商品検索エラー:', error);
       const errorMsg = 'サーバーとの通信に失敗しました';
       if (onError) onError(errorMsg);
       if (onSearchError) onSearchError(errorMsg);

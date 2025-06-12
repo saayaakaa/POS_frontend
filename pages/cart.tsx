@@ -3,7 +3,7 @@ import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { CartItem, PurchaseRequest, PurchaseResponse } from '../types/Product';
-import { getApiBaseUrl } from '../utils/api';
+import { getPurchaseUrl } from '../utils/api';
 
 interface LastPurchase {
   totalAmount: number;
@@ -63,7 +63,12 @@ const Cart: NextPage = () => {
         }))
       };
 
-      const response = await fetch(`${getApiBaseUrl()}/api/v1/purchase`, {
+      console.log('購入処理開始:', {
+        url: getPurchaseUrl(),
+        data: purchaseData
+      });
+
+      const response = await fetch(getPurchaseUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,8 +76,14 @@ const Cart: NextPage = () => {
         body: JSON.stringify(purchaseData),
       });
 
+      console.log('購入処理レスポンス:', {
+        status: response.status,
+        ok: response.ok
+      });
+
       if (response.ok) {
         const result: PurchaseResponse = await response.json();
+        console.log('購入処理成功:', result);
         setLastPurchase({
           totalAmount: result.TOTAL_AMT,
           transactionId: result.TRD_ID
